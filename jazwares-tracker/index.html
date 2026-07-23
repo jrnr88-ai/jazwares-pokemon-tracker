@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jazwares Pokemon Collection</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Coleccion personal</p>
+        <h1>Jazwares Pokemon Collection</h1>
+      </div>
+      <div class="actions">
+        <button id="exportBtn" class="icon-btn" title="Exportar progreso" aria-label="Exportar progreso">
+          <span aria-hidden="true">⬇</span>
+        </button>
+        <label class="icon-btn" title="Importar progreso" aria-label="Importar progreso">
+          <span aria-hidden="true">⬆</span>
+          <input id="importInput" type="file" accept="application/json" />
+        </label>
+        <button id="resetBtn" class="icon-btn danger" title="Restaurar estado del Excel" aria-label="Restaurar estado del Excel">
+          <span aria-hidden="true">↺</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="overview" aria-label="Resumen">
+        <div class="metric">
+          <span id="caughtCount">0</span>
+          <small>Atrapados</small>
+        </div>
+        <div class="metric">
+          <span id="missingCount">0</span>
+          <small>Faltantes</small>
+        </div>
+        <div class="metric">
+          <span id="completionCount">0%</span>
+          <small>Completado</small>
+        </div>
+        <div class="progress-wrap" aria-label="Progreso total">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Filtros">
+        <label class="search">
+          <span>Buscar</span>
+          <input id="searchInput" type="search" placeholder="Pikachu, Kanto, 4.5..." autocomplete="off" />
+        </label>
+        <label>
+          <span>Estado</span>
+          <select id="statusFilter">
+            <option value="all">Todos</option>
+            <option value="caught">Atrapados</option>
+            <option value="missing">Faltantes</option>
+            <option value="pearly">Pearly</option>
+            <option value="tbd">TBD</option>
+          </select>
+        </label>
+        <label>
+          <span>Tamaño</span>
+          <select id="sizeFilter"></select>
+        </label>
+        <label>
+          <span>Region</span>
+          <select id="regionFilter"></select>
+        </label>
+        <label>
+          <span>Orden</span>
+          <select id="sortSelect">
+            <option value="pokemon">Pokemon A-Z</option>
+            <option value="wave">Wave</option>
+            <option value="size">Tamaño</option>
+            <option value="region">Region</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="lineup-head">
+        <div>
+          <h2>Checklist</h2>
+          <p id="resultCount">0 piezas</p>
+        </div>
+        <a href="https://jazwarespokemon.fandom.com/wiki/Jazwares_Pokemon_Figure_Wiki" target="_blank" rel="noreferrer">Wiki fuente</a>
+      </section>
+
+      <section id="grid" class="grid" aria-live="polite"></section>
+      <p id="emptyState" class="empty" hidden>No hay piezas con esos filtros.</p>
+    </main>
+
+    <template id="cardTemplate">
+      <article class="card">
+        <label class="check">
+          <input type="checkbox" />
+          <span></span>
+        </label>
+        <div class="figure">
+          <img alt="" loading="lazy" />
+          <div class="fallback" aria-hidden="true"></div>
+        </div>
+        <div class="card-body">
+          <div class="title-row">
+            <h3></h3>
+            <span class="pearly">Pearly</span>
+          </div>
+          <p class="meta"></p>
+          <div class="tags"></div>
+          <p class="packages"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
