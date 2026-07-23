@@ -124,10 +124,16 @@ function renderCard(item) {
     render();
   });
 
-  image.src = item.wikiImage || item.sprite;
   image.alt = item.pokemon;
   image.title = item.wikiFile || item.pokemon;
   fallback.hidden = true;
+  if (!item.wikiImage) {
+    image.hidden = true;
+    fallback.hidden = false;
+  } else {
+    image.hidden = false;
+    image.src = item.wikiImage;
+  }
   image.addEventListener("error", () => {
     image.hidden = true;
     fallback.hidden = false;
