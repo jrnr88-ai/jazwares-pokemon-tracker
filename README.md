@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/30318132/README.md)
 # Jazwares Pokemon Tracker
 
 Checklist personal para dar seguimiento a una coleccion de figuras Pokemon de Jazwares.
