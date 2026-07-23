@@ -51,13 +51,13 @@
       <section id="cloudPanel" class="cloud-panel" hidden>
         <div>
           <h2>Sincronizacion</h2>
-          <p id="cloudStatus">Guardando solo en este dispositivo.</p>
+          <p id="cloudStatus">Escribe tu codigo privado para sincronizar.</p>
         </div>
-        <form id="loginForm" class="cloud-form">
-          <input id="emailInput" type="email" placeholder="tu@email.com" autocomplete="email" />
-          <button type="submit">Entrar</button>
+        <form id="codeForm" class="cloud-form">
+          <input id="codeInput" type="password" placeholder="Codigo privado" autocomplete="current-password" />
+          <button type="submit">Conectar</button>
         </form>
-        <button id="logoutBtn" class="text-btn" type="button" hidden>Cerrar sesion</button>
+        <button id="disconnectBtn" class="text-btn" type="button" hidden>Desconectar</button>
       </section>
 
       <section class="controls" aria-label="Filtros">

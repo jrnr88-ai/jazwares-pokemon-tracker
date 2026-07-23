@@ -21,24 +21,25 @@ Checklist personal para dar seguimiento a una coleccion de figuras Pokemon de Ja
 
 ## Uso
 
-El progreso se guarda en el navegador con `localStorage`. Para moverlo entre dispositivos usa los botones:
+El progreso se guarda en el navegador con `localStorage`. Para moverlo entre dispositivos puedes usar:
 
 - Descargar: exporta tu progreso como JSON.
 - Subir: importa ese JSON en otro dispositivo.
 - Reset: restaura el estado base importado desde Excel.
+- Nube local: sincroniza con Supabase usando un codigo privado compartido.
 
 ## Sincronizacion con Supabase
 
 1. Crea un proyecto gratis en Supabase.
 2. En `SQL Editor`, pega y ejecuta el contenido de `supabase-schema.sql`.
-3. En `Authentication > URL Configuration`, agrega como Site URL:
-   `https://jrnr88-ai.github.io/jazwares-pokemon-tracker/`
-4. En `Project Settings > API`, copia:
+3. En `Project Settings > API Keys`, copia:
    - Project URL
-   - anon public key
-5. Edita `config.js` y reemplaza:
+   - Publishable key
+4. Edita `config.js` y reemplaza:
    - `TU-PROYECTO.supabase.co`
    - `TU-ANON-KEY`
-6. Sube `config.js`, `app.js`, `index.html`, `styles.css` y `supabase-schema.sql` actualizados a GitHub.
+5. Sube `config.js`, `app.js`, `index.html`, `styles.css` y `supabase-schema.sql` actualizados a GitHub.
 
-Cuando abras la pagina, usa el boton `Nube local`, escribe tu email y entra con el enlace que llega al correo. El progreso se sincroniza por usuario entre celular y computadora.
+Cuando abras la pagina, usa el boton `Nube local`, escribe un codigo privado de al menos 6 caracteres y usa exactamente el mismo codigo en celular y computadora.
+
+El aviso de Supabase sobre operaciones destructivas aparece porque el SQL reemplaza las funciones de sincronizacion si ya existen. No borra la tabla ni tu progreso.

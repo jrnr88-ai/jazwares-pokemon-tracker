@@ -1,4 +1,5 @@
 const STORAGE_KEY = "jazwares-pokemon-collection-v1";
+const CLOUD_CODE_KEY = "jazwares-cloud-code-hash-v1";
 const CONFIG = window.JAZWARES_CONFIG || {};
 const { items: baseItems, summary } = window.JAZWARES_DATA;
 
@@ -22,20 +23,21 @@ const els = {
   cloudBtn: document.querySelector("#cloudBtn"),
   cloudPanel: document.querySelector("#cloudPanel"),
   cloudStatus: document.querySelector("#cloudStatus"),
-  loginForm: document.querySelector("#loginForm"),
-  emailInput: document.querySelector("#emailInput"),
-  logoutBtn: document.querySelector("#logoutBtn"),
+  codeForm: document.querySelector("#codeForm"),
+  codeInput: document.querySelector("#codeInput"),
+  disconnectBtn: document.querySelector("#disconnectBtn"),
 };
 
 const supabaseReady =
   CONFIG.supabaseUrl &&
   CONFIG.supabaseAnonKey &&
   !CONFIG.supabaseUrl.includes("TU-PROYECTO") &&
+  !CONFIG.supabaseAnonKey.includes("PEGA_AQUI") &&
   window.supabase;
 const db = supabaseReady ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey) : null;
 
 let owned = loadOwnedState();
-let cloudUser = null;
+let cloudKey = localStorage.getItem(CLOUD_CODE_KEY);
 let syncTimer = null;
 
 function loadOwnedState() {
@@ -59,6 +61,12 @@ function saveOwnedState() {
   );
 }
 
+async function hashCode(code) {
+  const bytes = new TextEncoder().encode(`jazwares:${code.trim()}`);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function setCloudStatus(message, state = "local") {
   els.cloudStatus.textContent = message;
   els.cloudBtn.textContent = state === "online" ? "Nube activa" : state === "error" ? "Nube error" : "Nube local";
@@ -71,83 +79,82 @@ async function initCloud() {
     setCloudStatus("Configura Supabase para sincronizar entre celular y computadora.");
     return;
   }
-
-  const { data } = await db.auth.getSession();
-  cloudUser = data.session?.user || null;
-  updateAuthUi();
-
-  db.auth.onAuthStateChange((_event, session) => {
-    cloudUser = session?.user || null;
-    updateAuthUi();
-    if (cloudUser) loadCloudProgress();
-  });
-
-  if (cloudUser) {
-    await loadCloudProgress();
-  } else {
-    setCloudStatus("Inicia sesion con email para sincronizar en la nube.");
+  if (!cloudKey) {
+    setCloudStatus("Escribe tu codigo privado para sincronizar en la nube.");
+    return;
   }
+  els.disconnectBtn.hidden = false;
+  await loadCloudProgress();
 }
 
-function updateAuthUi() {
-  els.loginForm.hidden = Boolean(cloudUser);
-  els.logoutBtn.hidden = !cloudUser;
-  if (cloudUser) {
-    setCloudStatus(`Sincronizando como ${cloudUser.email}.`, "online");
+async function connectCloud(code) {
+  if (!db) {
+    setCloudStatus("Primero configura Supabase en config.js.", "error");
+    return;
   }
+  if (code.trim().length < 6) {
+    setCloudStatus("Usa un codigo de al menos 6 caracteres.", "error");
+    return;
+  }
+  cloudKey = await hashCode(code);
+  localStorage.setItem(CLOUD_CODE_KEY, cloudKey);
+  els.codeInput.value = "";
+  els.disconnectBtn.hidden = false;
+  setCloudStatus("Conectando con tu codigo privado...");
+  await loadCloudProgress();
+  await seedCloudProgress();
 }
 
 async function loadCloudProgress() {
-  if (!db || !cloudUser) return;
-  const { data, error } = await db.from("collection_progress").select("item_id,caught");
+  if (!db || !cloudKey) return;
+  const { data, error } = await db.rpc("get_collection_progress", { p_collection_key: cloudKey });
   if (error) {
     setCloudStatus(`No pude leer Supabase: ${error.message}`, "error");
     return;
   }
 
-  const cloudOwned = Object.fromEntries(data.map((row) => [row.item_id, row.caught]));
+  const cloudOwned = Object.fromEntries((data || []).map((row) => [row.item_id, row.caught]));
   owned = { ...owned, ...cloudOwned };
   saveOwnedState();
   render();
-  setCloudStatus(`Sincronizado como ${cloudUser.email}.`, "online");
+  setCloudStatus("Sincronizado con codigo privado.", "online");
 }
 
 function queueCloudSave(itemId, caught) {
   saveOwnedState();
-  if (!db || !cloudUser) return;
+  if (!db || !cloudKey) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => saveCloudItem(itemId, caught), 250);
 }
 
 async function saveCloudItem(itemId, caught) {
-  const { error } = await db.from("collection_progress").upsert(
-    {
-      item_id: itemId,
-      caught,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,item_id" }
-  );
+  const { error } = await db.rpc("upsert_collection_progress", {
+    p_collection_key: cloudKey,
+    p_item_id: itemId,
+    p_caught: caught,
+  });
   if (error) {
     setCloudStatus(`No pude guardar en Supabase: ${error.message}`, "error");
   } else {
-    setCloudStatus(`Guardado en la nube como ${cloudUser.email}.`, "online");
+    setCloudStatus("Guardado en la nube.", "online");
   }
 }
 
 async function seedCloudProgress() {
-  if (!db || !cloudUser) return;
-  const rows = Object.entries(owned).map(([itemId, caught]) => ({
-    item_id: itemId,
-    caught,
-    updated_at: new Date().toISOString(),
-  }));
-  const { error } = await db.from("collection_progress").upsert(rows, { onConflict: "user_id,item_id" });
-  if (error) {
-    setCloudStatus(`No pude subir tu progreso actual: ${error.message}`, "error");
-  } else {
-    setCloudStatus("Progreso local subido a la nube.", "online");
+  if (!db || !cloudKey) return;
+  setCloudStatus("Subiendo progreso local a la nube...");
+  for (const [itemId, caught] of Object.entries(owned)) {
+    const { error } = await db.rpc("upsert_collection_progress", {
+      p_collection_key: cloudKey,
+      p_item_id: itemId,
+      p_caught: caught,
+    });
+    if (error) {
+      setCloudStatus(`No pude subir tu progreso actual: ${error.message}`, "error");
+      return;
+    }
   }
+  setCloudStatus("Progreso sincronizado en la nube.", "online");
 }
 
 function uniqueOptions(key) {
@@ -327,25 +334,15 @@ fillSelect(els.regionFilter, "Todas", uniqueOptions("region"));
 els.cloudBtn.addEventListener("click", () => {
   els.cloudPanel.hidden = !els.cloudPanel.hidden;
 });
-els.loginForm.addEventListener("submit", async (event) => {
+els.codeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!db) {
-    setCloudStatus("Primero configura Supabase en config.js.", "error");
-    return;
-  }
-  const email = els.emailInput.value.trim();
-  if (!email) return;
-  const { error } = await db.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href.split("#")[0] },
-  });
-  setCloudStatus(error ? `No pude enviar el enlace: ${error.message}` : "Revisa tu email para entrar.", error ? "error" : "local");
+  await connectCloud(els.codeInput.value);
 });
-els.logoutBtn.addEventListener("click", async () => {
-  if (db) await db.auth.signOut();
-  cloudUser = null;
-  setCloudStatus("Sesion cerrada. Guardando solo en este dispositivo.");
-  updateAuthUi();
+els.disconnectBtn.addEventListener("click", () => {
+  cloudKey = null;
+  localStorage.removeItem(CLOUD_CODE_KEY);
+  els.disconnectBtn.hidden = true;
+  setCloudStatus("Desconectado. Guardando solo en este dispositivo.");
 });
 els.exportBtn.addEventListener("click", exportProgress);
 els.importInput.addEventListener("change", async (event) => {
