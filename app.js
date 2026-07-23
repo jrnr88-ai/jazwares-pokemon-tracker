@@ -1,4 +1,5 @@
 const STORAGE_KEY = "jazwares-pokemon-collection-v1";
+const CONFIG = window.JAZWARES_CONFIG || {};
 const { items: baseItems, summary } = window.JAZWARES_DATA;
 
 const els = {
@@ -18,9 +19,24 @@ const els = {
   exportBtn: document.querySelector("#exportBtn"),
   importInput: document.querySelector("#importInput"),
   resetBtn: document.querySelector("#resetBtn"),
+  cloudBtn: document.querySelector("#cloudBtn"),
+  cloudPanel: document.querySelector("#cloudPanel"),
+  cloudStatus: document.querySelector("#cloudStatus"),
+  loginForm: document.querySelector("#loginForm"),
+  emailInput: document.querySelector("#emailInput"),
+  logoutBtn: document.querySelector("#logoutBtn"),
 };
 
+const supabaseReady =
+  CONFIG.supabaseUrl &&
+  CONFIG.supabaseAnonKey &&
+  !CONFIG.supabaseUrl.includes("TU-PROYECTO") &&
+  window.supabase;
+const db = supabaseReady ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey) : null;
+
 let owned = loadOwnedState();
+let cloudUser = null;
+let syncTimer = null;
 
 function loadOwnedState() {
   const fallback = Object.fromEntries(baseItems.map((item) => [item.id, item.caught]));
@@ -41,6 +57,97 @@ function saveOwnedState() {
       owned,
     })
   );
+}
+
+function setCloudStatus(message, state = "local") {
+  els.cloudStatus.textContent = message;
+  els.cloudBtn.textContent = state === "online" ? "Nube activa" : state === "error" ? "Nube error" : "Nube local";
+  els.cloudBtn.classList.toggle("is-online", state === "online");
+  els.cloudBtn.classList.toggle("is-error", state === "error");
+}
+
+async function initCloud() {
+  if (!db) {
+    setCloudStatus("Configura Supabase para sincronizar entre celular y computadora.");
+    return;
+  }
+
+  const { data } = await db.auth.getSession();
+  cloudUser = data.session?.user || null;
+  updateAuthUi();
+
+  db.auth.onAuthStateChange((_event, session) => {
+    cloudUser = session?.user || null;
+    updateAuthUi();
+    if (cloudUser) loadCloudProgress();
+  });
+
+  if (cloudUser) {
+    await loadCloudProgress();
+  } else {
+    setCloudStatus("Inicia sesion con email para sincronizar en la nube.");
+  }
+}
+
+function updateAuthUi() {
+  els.loginForm.hidden = Boolean(cloudUser);
+  els.logoutBtn.hidden = !cloudUser;
+  if (cloudUser) {
+    setCloudStatus(`Sincronizando como ${cloudUser.email}.`, "online");
+  }
+}
+
+async function loadCloudProgress() {
+  if (!db || !cloudUser) return;
+  const { data, error } = await db.from("collection_progress").select("item_id,caught");
+  if (error) {
+    setCloudStatus(`No pude leer Supabase: ${error.message}`, "error");
+    return;
+  }
+
+  const cloudOwned = Object.fromEntries(data.map((row) => [row.item_id, row.caught]));
+  owned = { ...owned, ...cloudOwned };
+  saveOwnedState();
+  render();
+  setCloudStatus(`Sincronizado como ${cloudUser.email}.`, "online");
+}
+
+function queueCloudSave(itemId, caught) {
+  saveOwnedState();
+  if (!db || !cloudUser) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => saveCloudItem(itemId, caught), 250);
+}
+
+async function saveCloudItem(itemId, caught) {
+  const { error } = await db.from("collection_progress").upsert(
+    {
+      item_id: itemId,
+      caught,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,item_id" }
+  );
+  if (error) {
+    setCloudStatus(`No pude guardar en Supabase: ${error.message}`, "error");
+  } else {
+    setCloudStatus(`Guardado en la nube como ${cloudUser.email}.`, "online");
+  }
+}
+
+async function seedCloudProgress() {
+  if (!db || !cloudUser) return;
+  const rows = Object.entries(owned).map(([itemId, caught]) => ({
+    item_id: itemId,
+    caught,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await db.from("collection_progress").upsert(rows, { onConflict: "user_id,item_id" });
+  if (error) {
+    setCloudStatus(`No pude subir tu progreso actual: ${error.message}`, "error");
+  } else {
+    setCloudStatus("Progreso local subido a la nube.", "online");
+  }
 }
 
 function uniqueOptions(key) {
@@ -120,14 +227,20 @@ function renderCard(item) {
   checkbox.checked = isOwned;
   checkbox.addEventListener("change", () => {
     owned[item.id] = checkbox.checked;
-    saveOwnedState();
+    queueCloudSave(item.id, checkbox.checked);
     render();
   });
 
-  image.src = item.wikiImage || item.sprite;
   image.alt = item.pokemon;
   image.title = item.wikiFile || item.pokemon;
   fallback.hidden = true;
+  if (!item.wikiImage) {
+    image.hidden = true;
+    fallback.hidden = false;
+  } else {
+    image.hidden = false;
+    image.src = item.wikiImage;
+  }
   image.addEventListener("error", () => {
     image.hidden = true;
     fallback.hidden = false;
@@ -194,12 +307,14 @@ async function importProgress(file) {
   owned = { ...owned, ...payload.owned };
   saveOwnedState();
   render();
+  await seedCloudProgress();
 }
 
-function resetToExcel() {
+async function resetToExcel() {
   owned = Object.fromEntries(baseItems.map((item) => [item.id, item.caught]));
   saveOwnedState();
   render();
+  await seedCloudProgress();
 }
 
 fillSelect(els.sizeFilter, "Todos", uniqueOptions("size"));
@@ -209,6 +324,29 @@ fillSelect(els.regionFilter, "Todas", uniqueOptions("region"));
   control.addEventListener("input", render);
 });
 
+els.cloudBtn.addEventListener("click", () => {
+  els.cloudPanel.hidden = !els.cloudPanel.hidden;
+});
+els.loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!db) {
+    setCloudStatus("Primero configura Supabase en config.js.", "error");
+    return;
+  }
+  const email = els.emailInput.value.trim();
+  if (!email) return;
+  const { error } = await db.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href.split("#")[0] },
+  });
+  setCloudStatus(error ? `No pude enviar el enlace: ${error.message}` : "Revisa tu email para entrar.", error ? "error" : "local");
+});
+els.logoutBtn.addEventListener("click", async () => {
+  if (db) await db.auth.signOut();
+  cloudUser = null;
+  setCloudStatus("Sesion cerrada. Guardando solo en este dispositivo.");
+  updateAuthUi();
+});
 els.exportBtn.addEventListener("click", exportProgress);
 els.importInput.addEventListener("change", async (event) => {
   try {
@@ -222,3 +360,4 @@ els.importInput.addEventListener("change", async (event) => {
 els.resetBtn.addEventListener("click", resetToExcel);
 
 render();
+initCloud();

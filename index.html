@@ -13,6 +13,9 @@
         <h1>Jazwares Pokemon Collection</h1>
       </div>
       <div class="actions">
+        <button id="cloudBtn" class="cloud-btn" title="Sincronizar en la nube" aria-label="Sincronizar en la nube">
+          Nube local
+        </button>
         <button id="exportBtn" class="icon-btn" title="Exportar progreso" aria-label="Exportar progreso">
           <span aria-hidden="true">⬇</span>
         </button>
@@ -43,6 +46,18 @@
         <div class="progress-wrap" aria-label="Progreso total">
           <div id="progressBar" class="progress-bar"></div>
         </div>
+      </section>
+
+      <section id="cloudPanel" class="cloud-panel" hidden>
+        <div>
+          <h2>Sincronizacion</h2>
+          <p id="cloudStatus">Guardando solo en este dispositivo.</p>
+        </div>
+        <form id="loginForm" class="cloud-form">
+          <input id="emailInput" type="email" placeholder="tu@email.com" autocomplete="email" />
+          <button type="submit">Entrar</button>
+        </form>
+        <button id="logoutBtn" class="text-btn" type="button" hidden>Cerrar sesion</button>
       </section>
 
       <section class="controls" aria-label="Filtros">
@@ -113,6 +128,8 @@
       </article>
     </template>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="data.js"></script>
     <script src="app.js"></script>
   </body>
