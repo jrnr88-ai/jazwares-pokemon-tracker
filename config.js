@@ -1,4 +1,4 @@
 window.JAZWARES_CONFIG = {
   supabaseUrl: "https://komsfzddwbiqldfvpdwk.supabase.co",
-  supabaseAnonKey: "PEGA_AQUI_LA_PUBLISHABLE_KEY",
+  supabaseAnonKey: "sb_publishable_hhj-J3njoPGX4UbOB0UEcA_CWq1nTxX",
 };
