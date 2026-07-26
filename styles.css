@@ -413,6 +413,24 @@ main {
   line-height: 1.35;
 }
 
+.detail-btn {
+  justify-self: start;
+  min-height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.35rem 0.65rem;
+}
+
+.detail-btn:hover {
+  border-color: var(--mint);
+  color: var(--mint);
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -434,6 +452,122 @@ main {
   border-radius: 8px;
   color: var(--muted);
   text-align: center;
+}
+
+.detail-dialog {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 70px rgba(24, 39, 45, 0.28);
+  padding: 0;
+}
+
+.detail-dialog::backdrop {
+  background: rgba(23, 33, 38, 0.45);
+}
+
+.detail-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.2rem;
+}
+
+.detail-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  font-size: 1.2rem;
+}
+
+.detail-figure {
+  display: grid;
+  place-items: center;
+  min-height: 18rem;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(45, 140, 120, 0.12), rgba(201, 144, 47, 0.08)),
+    var(--soft);
+}
+
+.detail-figure img {
+  width: 86%;
+  max-height: 15rem;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 14px rgba(24, 39, 45, 0.16));
+}
+
+.detail-figure img[hidden] {
+  display: none;
+}
+
+.detail-content {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  min-width: 0;
+  padding-right: 2.5rem;
+}
+
+.detail-content h2 {
+  overflow-wrap: anywhere;
+}
+
+.detail-block {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.detail-block h3 {
+  font-size: 0.95rem;
+}
+
+.detail-block ul {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+.package-card {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 4.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.package-card img {
+  width: 4.25rem;
+  height: 3.6rem;
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--soft);
+}
+
+.package-card span {
+  overflow-wrap: anywhere;
+}
+
+.package-card.no-image {
+  grid-template-columns: 1fr;
+}
+
+.wiki-link {
+  color: var(--mint);
+  font-weight: 850;
+  text-decoration: none;
 }
 
 @media (max-width: 900px) {
@@ -461,5 +595,17 @@ main {
 
   .card {
     grid-template-columns: 5rem minmax(0, 1fr);
+  }
+
+  .detail-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-content {
+    padding-right: 0;
+  }
+
+  .detail-figure {
+    min-height: 13rem;
   }
 }

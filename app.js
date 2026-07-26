@@ -26,6 +26,16 @@ const els = {
   codeForm: document.querySelector("#codeForm"),
   codeInput: document.querySelector("#codeInput"),
   disconnectBtn: document.querySelector("#disconnectBtn"),
+  detailDialog: document.querySelector("#detailDialog"),
+  detailClose: document.querySelector("#detailClose"),
+  detailImage: document.querySelector("#detailImage"),
+  detailFallback: document.querySelector("#detailFallback"),
+  detailKicker: document.querySelector("#detailKicker"),
+  detailTitle: document.querySelector("#detailTitle"),
+  detailMeta: document.querySelector("#detailMeta"),
+  detailTags: document.querySelector("#detailTags"),
+  detailPackages: document.querySelector("#detailPackages"),
+  detailWiki: document.querySelector("#detailWiki"),
 };
 
 const supabaseReady =
@@ -175,10 +185,21 @@ function normalized(text) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function isUpcoming(item) {
+  if (item.pending || item.wave === "TBD") return true;
+  const match = String(item.wave || "").match(/^(\d{4})-(\d{2})$/);
+  const currentYear = new Date().getFullYear();
+  if (match && Number(match[1]) >= currentYear) return true;
+  const packageText = (item.packages || []).join(" ");
+  if (new RegExp(`${currentYear}|Wave 29|Wave 24|Holiday Calendar 2`, "i").test(packageText)) return true;
+  if (!match) return false;
+  return false;
+}
+
 function itemMatches(item) {
   const query = normalized(els.searchInput.value);
   const haystack = normalized(
-    [item.pokemon, item.size, item.region, item.wave, item.gen, item.packages.join(" ")].join(" ")
+    [item.pokemon, item.size, item.region, item.wave, item.gen].join(" ")
   );
   const status = els.statusFilter.value;
   const size = els.sizeFilter.value;
@@ -189,7 +210,7 @@ function itemMatches(item) {
   if (status === "caught" && !isOwned) return false;
   if (status === "missing" && isOwned) return false;
   if (status === "pearly" && !item.pearly) return false;
-  if (status === "tbd" && !item.pending) return false;
+  if (status === "tbd" && !isUpcoming(item)) return false;
   if (size !== "all" && item.size !== size) return false;
   if (region !== "all" && item.region !== region) return false;
   return true;
@@ -227,6 +248,7 @@ function renderCard(item) {
   const meta = node.querySelector(".meta");
   const tags = node.querySelector(".tags");
   const packages = node.querySelector(".packages");
+  const detailBtn = node.querySelector(".detail-btn");
   const isOwned = Boolean(owned[item.id]);
 
   node.classList.toggle("is-caught", isOwned);
@@ -259,7 +281,7 @@ function renderCard(item) {
   [
     item.gen ? `Gen ${item.gen}` : null,
     item.pearly ? "Variante" : null,
-    item.pending ? "TBD" : null,
+    isUpcoming(item) ? "Proximo" : null,
     isOwned ? "Atrapado" : "Falta",
   ]
     .filter(Boolean)
@@ -270,8 +292,72 @@ function renderCard(item) {
       tags.append(tag);
     });
 
-  packages.textContent = item.packages.length ? `Paquetes: ${item.packages.join(", ")}` : "Sin paquete registrado";
+  packages.textContent = item.packages.length ? `${item.packages.length} paquete(s)` : "Sin paquete registrado";
+  detailBtn.addEventListener("click", () => showDetail(item));
   return node;
+}
+
+function tagsForItem(item) {
+  const isOwned = Boolean(owned[item.id]);
+  return [
+    item.gen ? `Gen ${item.gen}` : null,
+    item.pearly ? "Variante" : null,
+    isUpcoming(item) ? "Proximo" : null,
+    isOwned ? "Atrapado" : "Falta",
+  ].filter(Boolean);
+}
+
+function showDetail(item) {
+  els.detailTitle.textContent = item.pokemon;
+  els.detailKicker.textContent = item.pending ? "Proximo lanzamiento" : "Ficha de figura";
+  els.detailMeta.textContent = [item.wave && `Wave ${item.wave}`, item.size, item.region].filter(Boolean).join(" · ");
+
+  els.detailTags.replaceChildren();
+  tagsForItem(item).forEach((label) => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = label;
+    els.detailTags.append(tag);
+  });
+
+  els.detailImage.alt = item.pokemon;
+  els.detailFallback.hidden = true;
+  if (item.wikiImage) {
+    els.detailImage.hidden = false;
+    els.detailImage.src = item.wikiImage;
+  } else {
+    els.detailImage.hidden = true;
+    els.detailFallback.hidden = false;
+  }
+
+  const packageDetails = item.packageDetails?.length
+    ? item.packageDetails
+    : (item.packages || []).map((name) => ({ name }));
+  const packageEntries = packageDetails.length
+    ? packageDetails
+    : [{ name: "Sin paquete registrado en el tracker" }];
+  els.detailPackages.replaceChildren(
+    ...packageEntries.map((packageInfo) => {
+      const entry = document.createElement("li");
+      entry.className = "package-card";
+      if (packageInfo.image) {
+        const image = document.createElement("img");
+        image.src = packageInfo.image;
+        image.alt = packageInfo.name;
+        image.loading = "lazy";
+        entry.append(image);
+      } else {
+        entry.classList.add("no-image");
+      }
+      const name = document.createElement("span");
+      name.textContent = packageInfo.name;
+      entry.append(name);
+      return entry;
+    })
+  );
+
+  els.detailWiki.href = item.wikiPage || "https://jazwarespokemon.fandom.com/wiki/Jazwares_Pokemon_Figure_Wiki";
+  els.detailDialog.showModal();
 }
 
 function render() {
@@ -343,6 +429,14 @@ els.disconnectBtn.addEventListener("click", () => {
   localStorage.removeItem(CLOUD_CODE_KEY);
   els.disconnectBtn.hidden = true;
   setCloudStatus("Desconectado. Guardando solo en este dispositivo.");
+});
+els.detailClose.addEventListener("click", () => {
+  els.detailDialog.close();
+});
+els.detailDialog.addEventListener("click", (event) => {
+  if (event.target === els.detailDialog) {
+    els.detailDialog.close();
+  }
 });
 els.exportBtn.addEventListener("click", exportProgress);
 els.importInput.addEventListener("change", async (event) => {

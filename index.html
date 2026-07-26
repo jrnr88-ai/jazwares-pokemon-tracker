@@ -72,7 +72,7 @@
             <option value="caught">Atrapados</option>
             <option value="missing">Faltantes</option>
             <option value="pearly">Pearly</option>
-            <option value="tbd">TBD</option>
+            <option value="tbd">Proximos/TBD</option>
           </select>
         </label>
         <label>
@@ -124,9 +124,31 @@
           <p class="meta"></p>
           <div class="tags"></div>
           <p class="packages"></p>
+          <button class="detail-btn" type="button">Ficha</button>
         </div>
       </article>
     </template>
+
+    <dialog id="detailDialog" class="detail-dialog">
+      <div class="detail-shell">
+        <button id="detailClose" class="icon-btn detail-close" type="button" aria-label="Cerrar ficha">×</button>
+        <div class="detail-figure">
+          <img id="detailImage" alt="" />
+          <div id="detailFallback" class="fallback" aria-hidden="true"></div>
+        </div>
+        <section class="detail-content">
+          <p id="detailKicker" class="eyebrow"></p>
+          <h2 id="detailTitle"></h2>
+          <p id="detailMeta" class="meta"></p>
+          <div id="detailTags" class="tags"></div>
+          <div class="detail-block">
+            <h3>Paquetes</h3>
+            <ul id="detailPackages"></ul>
+          </div>
+          <a id="detailWiki" class="wiki-link" target="_blank" rel="noreferrer">Abrir en wiki</a>
+        </section>
+      </div>
+    </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
