@@ -187,12 +187,6 @@ function normalized(text) {
 
 function isUpcoming(item) {
   if (item.pending || item.wave === "TBD") return true;
-  const match = String(item.wave || "").match(/^(\d{4})-(\d{2})$/);
-  const currentYear = new Date().getFullYear();
-  if (match && Number(match[1]) >= currentYear) return true;
-  const packageText = (item.packages || []).join(" ");
-  if (new RegExp(`${currentYear}|Wave 29|Wave 24|Holiday Calendar 2`, "i").test(packageText)) return true;
-  if (!match) return false;
   return false;
 }
 
