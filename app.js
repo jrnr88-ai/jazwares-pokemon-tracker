@@ -193,7 +193,7 @@ function isUpcoming(item) {
 function itemMatches(item) {
   const query = normalized(els.searchInput.value);
   const haystack = normalized(
-    [item.pokemon, item.size, item.region, item.wave, item.gen].join(" ")
+    [item.pokemon, item.size, item.region, item.wave, item.gen, item.dex && `#${item.dex}`].join(" ")
   );
   const status = els.statusFilter.value;
   const size = els.sizeFilter.value;
@@ -213,6 +213,10 @@ function itemMatches(item) {
 function sortItems(items) {
   const sortKey = els.sortSelect.value;
   return [...items].sort((a, b) => {
+    if (sortKey === "dex") {
+      const result = (a.dex || 9999) - (b.dex || 9999);
+      return result || a.pokemon.localeCompare(b.pokemon, "es", { numeric: true });
+    }
     const first = String(a[sortKey] || "");
     const second = String(b[sortKey] || "");
     const result = first.localeCompare(second, "es", { numeric: true });
@@ -270,10 +274,13 @@ function renderCard(item) {
   });
 
   title.textContent = item.pokemon;
-  meta.textContent = [item.wave && `Wave ${item.wave}`, item.size, item.region].filter(Boolean).join(" · ");
+  meta.textContent = [item.dex && `#${String(item.dex).padStart(3, "0")}`, item.wave && `Wave ${item.wave}`, item.size, item.region]
+    .filter(Boolean)
+    .join(" · ");
 
   [
     item.gen ? `Gen ${item.gen}` : null,
+    item.dex ? `Dex #${String(item.dex).padStart(3, "0")}` : null,
     item.pearly ? "Variante" : null,
     isUpcoming(item) ? "Proximo" : null,
     isOwned ? "Atrapado" : "Falta",
@@ -304,7 +311,9 @@ function tagsForItem(item) {
 function showDetail(item) {
   els.detailTitle.textContent = item.pokemon;
   els.detailKicker.textContent = item.pending ? "Proximo lanzamiento" : "Ficha de figura";
-  els.detailMeta.textContent = [item.wave && `Wave ${item.wave}`, item.size, item.region].filter(Boolean).join(" · ");
+  els.detailMeta.textContent = [item.dex && `#${String(item.dex).padStart(3, "0")}`, item.wave && `Wave ${item.wave}`, item.size, item.region]
+    .filter(Boolean)
+    .join(" · ");
 
   els.detailTags.replaceChildren();
   tagsForItem(item).forEach((label) => {
